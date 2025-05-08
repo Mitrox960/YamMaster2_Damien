@@ -102,7 +102,6 @@ Le jeu intègre un **bot fonctionnel** :
 
 Lancer la partie frontend expo en allant à la racine du projet. Ouvrir un CMD et tapez :
   - npm install
-puis
   - npx expo start
 
 Allez dans le dossier backend puis ouvrir un cmd et tapez :
