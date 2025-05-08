@@ -83,7 +83,8 @@ const GAME_INIT = {
       player1Tokens: 12,
       player2Tokens: 12,
       choices: {},
-      deck: {}
+      deck: {},
+      scoredAlignments: []  
     }
   }
   
@@ -96,6 +97,7 @@ const GameService = {
             game['gameState']['deck'] = { ...DECK_INIT };
             game['gameState']['choices'] = { ...CHOICES_INIT };
             game['gameState']['grid'] = [ ...GRID_INIT];
+            game['gameState']['scoredAlignments'] = [];
             return game;
         },
 
@@ -316,63 +318,68 @@ const GameService = {
     },
 
     grid: {
-        
-        checkAlignmentsAndScore(grid, playerKey) {
+        checkAlignmentsAndScore(grid, playerKey, gameState) {
             const directions = [
-                { x: 1, y: 0 },   // horizontal
-                { x: 0, y: 1 },   // vertical
-                { x: 1, y: 1 },   // diagonal \
-                { x: 1, y: -1 }   // diagonal /
+              { x: 1, y: 0 },   // horizontal
+              { x: 0, y: 1 },   // vertical
+              { x: 1, y: 1 },   // diagonal \
+              { x: 1, y: -1 }   // diagonal /
             ];
-        
+          
+            if (!gameState.scoredAlignments) {
+              gameState.scoredAlignments = [];
+            }
+          
             const numRows = grid.length;
             const numCols = grid[0].length;
-            const visited = new Set();
-            let points = 0;
-        
+            let newPoints = 0;
+          
             for (let row = 0; row < numRows; row++) {
-                for (let col = 0; col < numCols; col++) {
-                    if (grid[row][col].owner !== playerKey) continue;
-        
-                    for (const { x: dx, y: dy } of directions) {
-                        const prevR = row - dy;
-                        const prevC = col - dx;
-                        if (
-                            prevR >= 0 && prevR < numRows &&
-                            prevC >= 0 && prevC < numCols &&
-                            grid[prevR][prevC].owner === playerKey
-                        ) continue;
-        
-                        let count = 1;
-                        const path = [`${row},${col}`];
-                        let r = row + dy;
-                        let c = col + dx;
-        
-                        while (
-                            r >= 0 && r < numRows &&
-                            c >= 0 && c < numCols &&
-                            grid[r][c].owner === playerKey
-                        ) {
-                            path.push(`${r},${c}`);
-                            count++;
-                            r += dy;
-                            c += dx;
-                        }
-        
-                        const key = path.join('|');
-                        if (visited.has(key)) continue;
-                        visited.add(key);
-        
-                        if (count >= 5) return { won: true };
-                        if (count === 4) points += 2;
-                        else if (count === 3) points += 1;
+              for (let col = 0; col < numCols; col++) {
+                if (grid[row][col].owner !== playerKey) continue;
+          
+                for (const { x: dx, y: dy } of directions) {
+                  const path = [];
+          
+                  let r = row;
+                  let c = col;
+          
+                  const prevR = row - dy;
+                  const prevC = col - dx;
+                  if (
+                    prevR >= 0 && prevR < numRows &&
+                    prevC >= 0 && prevC < numCols &&
+                    grid[prevR][prevC].owner === playerKey
+                  ) continue;
+          
+                  while (
+                    r >= 0 && r < numRows &&
+                    c >= 0 && c < numCols &&
+                    grid[r][c].owner === playerKey
+                  ) {
+                    path.push(`${r},${c}`);
+                    r += dy;
+                    c += dx;
+                  }
+          
+                  if (path.length >= 5) {
+                    return { won: true };
+                  }
+          
+                  if (path.length === 3 || path.length === 4) {
+                    const key = path.join('|');
+                    if (!gameState.scoredAlignments.includes(key)) {
+                      gameState.scoredAlignments.push(key);
+                      newPoints += path.length === 3 ? 1 : 2;
                     }
+                  }
                 }
+              }
             }
-        
-            return { points, won: false };
-        },
-
+          
+            return { won: false, points: newPoints };
+          },
+          
         resetcanBeCheckedCells: (grid) => {
             const updatedGrid = grid.map(row => row.map(cell => {
                 return { ...cell, canBeChecked: false };    
