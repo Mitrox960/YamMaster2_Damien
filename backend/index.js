@@ -338,7 +338,7 @@ io.on('connection', socket => {
     }
   
     // 7) Vérification alignements / victoire instantanée
-    const result = GameService.grid.checkAlignmentsAndScore(game.gameState.grid, me);
+    const result = GameService.grid.checkAlignmentsAndScore(game.gameState.grid, me, game.gameState);
     if (result.won) {
       // notification de fin de partie
       game.player1Socket.emit('game.end', {
@@ -475,7 +475,7 @@ function handleBotTurn(game) {
 
     // 6) Alignements / points
     if (placed) {
-      const res = GameService.grid.checkAlignmentsAndScore(game.gameState.grid, 'player:2');
+      const res = GameService.grid.checkAlignmentsAndScore(game.gameState.grid, 'player:2', game.gameState);
       if (res.won) {
         game.player1Socket.emit('game.end', {
           winner: 'player:2', isWinner: false,
