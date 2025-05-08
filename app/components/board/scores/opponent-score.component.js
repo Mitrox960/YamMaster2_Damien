@@ -1,32 +1,50 @@
+// app/components/board/scores/opponent-score.component.js
+
 import React, { useEffect, useState, useContext } from "react";
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { SocketContext } from '../../../contexts/socket.context';
 
-const OpponentScore = () => {
-    const socket = useContext(SocketContext);
-    const [opponentScore, setOpponentScore] = useState(0);
-  
-    useEffect(() => {
-  
-      socket.on("game.score", (data) => {
-        setOpponentScore(data['opponentScore'])
-      });
-  
-    }, []);
-    return (
-      <View style={styles.opponentScoreContainer}>
-        <Text>Score : {opponentScore}</Text>
-      </View>
-    );
-  };
+const { width } = Dimensions.get('window');
+const CARD_BG = '#1b263b';
+const TEXT = '#e0e1dd';
+const GAP = 8;
 
+export default function OpponentScore() {
+  const socket = useContext(SocketContext);
+  const [score, setScore] = useState(0);
 
-  const styles = StyleSheet.create({
-    opponentScoreContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-      }
+  useEffect(() => {
+    const handler = data => setScore(data.opponentScore);
+    socket.on('game.score', handler);
+    return () => socket.off('game.score', handler);
+  }, []);
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.label}>Adversaire</Text>
+      <Text style={styles.value}>{score}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: CARD_BG,
+    padding: GAP,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: width * 0.27,
+    marginHorizontal: GAP / 2,
+  },
+  label: {
+    color: TEXT,
+    fontSize: 20,
+    marginBottom: 4,
+  },
+  value: {
+    color: TEXT,
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
 });
-
-export default OpponentScore;

@@ -1,127 +1,120 @@
 // app/components/board/decks/player-deck.component.js
 
-import React, { useState, useContext, useEffect } from "react";
-import { View, TouchableOpacity, Text, StyleSheet } from "react-native";
-import { SocketContext } from "../../../contexts/socket.context";
-import Dice from "./dice.component";
+import React, { useState, useContext, useEffect } from 'react';
+import { View, TouchableOpacity, Text, StyleSheet, Dimensions } from 'react-native';
+import { SocketContext } from '../../../contexts/socket.context';
+import Dice from './dice.component';
 
-const PlayerDeck = () => {
+const { width } = Dimensions.get('window');
+const CONTAINER_WIDTH = width * 0.9;
+const BUTTON_BG = '#26a69a';
+const BUTTON_DISABLED_BG = '#415a77';
+const TEXT_COLOR = '#e0e1dd';
+const CARD_BG = '#1b263b';
+const GAP = 8;
 
+export default function PlayerDeck() {
   const socket = useContext(SocketContext);
-  const [displayPlayerDeck, setDisplayPlayerDeck] = useState(false);
-  const [dices, setDices] = useState(Array(5).fill(false));
-  const [displayRollButton, setDisplayRollButton] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [dices, setDices] = useState([]);
+  const [canRoll, setCanRoll] = useState(false);
   const [rollsCounter, setRollsCounter] = useState(0);
   const [rollsMaximum, setRollsMaximum] = useState(3);
 
   useEffect(() => {
-
-    socket.on("game.deck.view-state", (data) => {
-      setDisplayPlayerDeck(data['displayPlayerDeck']);
-      if (data['displayPlayerDeck']) {
-        setDisplayRollButton(data['displayRollButton']);
-        setRollsCounter(data['rollsCounter']);
-        setRollsMaximum(data['rollsMaximum']);
-        setDices(data['dices']);
-      }
-    });
+    const handler = data => {
+      setVisible(data.displayPlayerDeck);
+      setCanRoll(data.displayRollButton);
+      setRollsCounter(data.rollsCounter);
+      setRollsMaximum(data.rollsMaximum);
+      setDices(data.dices);
+    };
+    socket.on('game.deck.view-state', handler);
+    return () => socket.off('game.deck.view-state', handler);
   }, []);
 
-  const toggleDiceLock = (index) => {
-    const newDices = [...dices];
-    if (newDices[index].value !== '' && displayRollButton) {
-      socket.emit("game.dices.lock", newDices[index].id);
-    }
+  const onPressDice = index => {
+    if (visible && canRoll) socket.emit('game.dices.lock', dices[index].id);
   };
 
-  const rollDices = () => {
-    if (rollsCounter <= rollsMaximum) {
-      socket.emit("game.dices.roll");
-    }
+  const onRoll = () => {
+    if (canRoll) socket.emit('game.dices.roll');
   };
+
+  if (!visible) return null;
 
   return (
+    <View style={styles.container}>
+      <View style={styles.rollInfo}>
+        <Text style={styles.rollText}>Lancer {rollsCounter-1} / {rollsMaximum}</Text>
+      </View>
 
-    <View style={styles.deckPlayerContainer}>
+      <View style={styles.diceRow}>
+        {dices.map((d, i) => (
+          <Dice
+            key={d.id}
+            index={i}
+            locked={d.locked}
+            value={d.value}
+            onPress={onPressDice}
+          />
+        ))}
+      </View>
 
-      {displayPlayerDeck && (
-
-        <>
-          {displayRollButton && (
-
-            <>
-              <View style={styles.rollInfoContainer}>
-                <Text style={styles.rollInfoText}>
-                  Lancer {rollsCounter} / {rollsMaximum}
-                </Text>
-              </View>
-            </>
-
-          )}
-
-          <View style={styles.diceContainer}>
-            {dices.map((diceData, index) => (
-              <Dice
-                key={diceData.id}
-                index={index}
-                locked={diceData.locked}
-                value={diceData.value}
-                onPress={toggleDiceLock}
-              />
-            ))}
-          </View>
-
-          {displayRollButton && (
-
-            <>
-              <TouchableOpacity style={styles.rollButton} onPress={rollDices}>
-                <Text style={styles.rollButtonText}>Roll</Text>
-              </TouchableOpacity>
-            </>
-
-          )}
-        </>
-      )}
-
+      <TouchableOpacity
+        style={[
+          styles.rollButton,
+          { backgroundColor: canRoll ? BUTTON_BG : BUTTON_DISABLED_BG }
+        ]}
+        onPress={onRoll}
+        disabled={!canRoll}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.rollButtonText}>Roll</Text>
+      </TouchableOpacity>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  deckPlayerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderColor: "black"
+  container: {
+    width: CONTAINER_WIDTH,
+    backgroundColor: CARD_BG,
+    borderRadius: 10,
+    padding: GAP,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+    marginVertical: GAP,
   },
-  rollInfoContainer: {
-    marginBottom: 10,
+  rollInfo: {
+    marginBottom: GAP,
   },
-  rollInfoText: {
+  rollText: {
+    color: TEXT_COLOR,
     fontSize: 14,
-    fontStyle: "italic",
+    fontStyle: 'italic',
   },
-  diceContainer: {
-    flexDirection: "row",
-    width: "70%",
-    justifyContent: "space-between",
-    marginBottom: 10,
+  diceRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 4, // ou marginHorizontal sur chaque dé si `gap` ne fonctionne pas selon ta version de React Native
+    width: '100%',
+    marginBottom: GAP,
   },
+
   rollButton: {
-    width: "30%",
-    backgroundColor: "green",
-    paddingVertical: 10,
-    borderRadius: 5,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "black"
+    width: '40%',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
   },
   rollButtonText: {
-    fontSize: 18,
-    color: "white",
-    fontWeight: "bold",
+    color: TEXT_COLOR,
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
-
-export default PlayerDeck;
