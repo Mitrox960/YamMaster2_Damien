@@ -1,56 +1,69 @@
 // app/components/board/decks/opponent-deck.component.js
 
-import React, { useState, useContext, useEffect } from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { SocketContext } from "../../../contexts/socket.context";
-import Dice from "./dice.component";
+import React, { useState, useContext, useEffect } from 'react';
+import { View, StyleSheet, Dimensions } from 'react-native';
+import { SocketContext } from '../../../contexts/socket.context';
+import Dice from './dice.component';
 
-const OpponentDeck = () => {
+const { width } = Dimensions.get('window');
+const CONTAINER_WIDTH = width * 0.9;
+const CARD_BG = '#1b263b';
+const TEXT_COLOR = '#e0e1dd';
+const GAP = 8;
+
+export default function OpponentDeck() {
   const socket = useContext(SocketContext);
-  const [displayOpponentDeck, setDisplayOpponentDeck] = useState(false);
-  const [opponentDices, setOpponentDices] = useState(Array(5).fill({ value: "", locked: false }));
+  const [visible, setVisible] = useState(false);
+  const [dices, setDices] = useState([]);
 
   useEffect(() => {
-    socket.on("game.deck.view-state", (data) => {
-      setDisplayOpponentDeck(data['displayOpponentDeck']);
-      if (data['displayOpponentDeck']) {
-        setOpponentDices(data['dices']);
+    const handler = data => {
+      setVisible(data.displayOpponentDeck);
+      if (data.displayOpponentDeck) {
+        setDices(data.dices);
       }
-    });
+    };
+    socket.on('game.deck.view-state', handler);
+    return () => socket.off('game.deck.view-state', handler);
   }, []);
 
+  if (!visible) return null;
+
   return (
-    <View style={styles.deckOpponentContainer}>
-      {displayOpponentDeck && (
-        <View style={styles.diceContainer}>
-          {opponentDices.map((diceData, index) => (
-            <Dice
-              key={index}
-              locked={diceData.locked}
-              value={diceData.value}
-              opponent={true}
-            />
-          ))}
-        </View>
-      )}
+    <View style={styles.container}>
+      <View style={styles.diceRow}>
+        {dices.map((d, i) => (
+          <Dice
+            key={d.id || i}
+            index={i}
+            locked={d.locked}
+            value={d.value}
+            onPress={() => {}} // pas d’action pour l’adversaire
+          />
+        ))}
+      </View>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  deckOpponentContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderColor: "black"
+  container: {
+    width: CONTAINER_WIDTH,
+    backgroundColor: CARD_BG,
+    borderRadius: 10,
+    padding: GAP,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+    marginVertical: GAP,
   },
-  diceContainer: {
-    flexDirection: "row",
-    width: "70%",
-    justifyContent: "space-between",
-    marginBottom: 10,
+  diceRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 4,
+    width: '100%',
   },
 });
-
-export default OpponentDeck;

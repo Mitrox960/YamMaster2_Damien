@@ -1,5 +1,7 @@
+// app/components/board/board.component.js
+
 import React, { useContext, useEffect } from "react";
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet, Dimensions } from 'react-native';
 import PlayerTimer from './timers/player-timer.component';
 import OpponentTimer from './timers/opponent-timer.component';
 import PlayerDeck from "./decks/player-deck.component";
@@ -13,122 +15,102 @@ import Grid from "./grid/grid.component";
 import { useNavigation } from '@react-navigation/native';
 import { SocketContext } from '../../contexts/socket.context';
 
-const OpponentInfos = () => (
-  <View style={styles.opponentInfosContainer}>
-    <Text>Opponent infos</Text>
-  </View>
-);
+const { width } = Dimensions.get('window');
+const GAP = 8;
+const CARD_BG = '#1b263b';
+const BG = '#0d1b2a';
 
-const PlayerInfos = () => (
-  <View style={styles.playerInfosContainer}>
-    <Text>Player Infos</Text>
-  </View>
-);
-
-const Board = () => {
+export default function Board() {
   const navigation = useNavigation();
   const socket = useContext(SocketContext);
 
   useEffect(() => {
-    const handleEnd = (data) => {
-      navigation.navigate('GameSummaryScreen', {
-        winner: data.winner,
-        playerScore: data.playerScore,
-        opponentScore: data.opponentScore,
-        playerTokens: data.playerTokens,
-        opponentTokens: data.opponentTokens,
-        idPlayer: socket.id,
-      });
-    };
-
+    const handleEnd = (data) => navigation.navigate('GameSummaryScreen', data);
     socket.on('game.end', handleEnd);
-
-    return () => {
-      socket.off('game.end', handleEnd);
-    };
-  }, []);
+    return () => socket.off('game.end', handleEnd);
+  }, [socket]);
 
   return (
     <View style={styles.container}>
-      <View style={[styles.row, { height: '5%' }]}>
-        <OpponentInfos />
-        <View style={styles.opponentTimerScoreContainer}>
-          <OpponentTimer />
-          <OpponentScore />
-          <OpponentTokens />
-        </View>
+      {/* Header: Opponent timer, score, tokens inline */}
+      <View style={styles.headerRow}>
+        <OpponentTimer />
+        <OpponentScore />
+        <OpponentTokens />
       </View>
 
-      <View style={[styles.row, { height: '25%' }]}>
+      {/* Opponent Deck */}
+      <View style={styles.section}>
         <OpponentDeck />
       </View>
 
-      <View style={[styles.row, { height: '40%' }]}>
+      {/* Grid and Choices */}
+      <View style={styles.gridSection}>
         <Grid />
+      </View>
+      <View style={styles.sectionChoices}>
         <Choices />
       </View>
 
-      <View style={[styles.row, { height: '25%' }]}>
+      {/* Player Deck */}
+      <View style={styles.section}>
         <PlayerDeck />
       </View>
 
-      <View style={[styles.row, { height: '5%' }]}>
-        <PlayerInfos />
-        <View style={styles.playerTimerScoreContainer}>
-          <PlayerTimer />
-          <PlayerScore />
-          <PlayerTokens />
-        </View>
+      {/* Footer: Player timer, score, tokens inline */}
+      <View style={styles.footerRow}>
+        <PlayerTimer />
+        <PlayerScore />
+        <PlayerTokens />
       </View>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: 'column',
+    backgroundColor: BG,
+    padding: GAP,
+  },
+  headerRow: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    width: '100%',
-    height: '100%',
+    backgroundColor: CARD_BG,
+    padding: GAP,
+    borderRadius: 10,
+    marginBottom: GAP,
   },
-  row: {
+  footerRow: {
     flexDirection: 'row',
-    width: '100%',
-    borderBottomWidth: 1,
-    borderColor: 'black',
-  },
-  opponentInfosContainer: {
-    flex: 7,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    borderRightWidth: 1,
-    borderColor: 'black',
-    backgroundColor: "lightgrey"
+    backgroundColor: CARD_BG,
+    padding: GAP,
+    borderRadius: 10,
+    marginTop: GAP,
   },
-  opponentTimerScoreContainer: {
+  section: {
+    backgroundColor: CARD_BG,
+    borderRadius: 10,
+    padding: GAP,
+    marginVertical: GAP,
+    alignItems: 'center',
+  },
+  gridSection: {
     flex: 3,
-    flexDirection: 'column',
+    backgroundColor: CARD_BG,
+    borderRadius: 10,
+    padding: GAP,
+    marginVertical: GAP,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: "lightgrey"
   },
-  playerInfosContainer: {
-    flex: 7,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRightWidth: 1,
-    borderColor: 'black',
-    backgroundColor: "lightgrey"
-  },
-  playerTimerScoreContainer: {
-    flex: 3,
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: "lightgrey"
-  },
+  sectionChoices: {
+    backgroundColor: CARD_BG,
+    borderRadius: 10,
+    padding: GAP,
+    marginVertical: GAP,
+  }
 });
-
-export default Board;

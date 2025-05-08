@@ -1,104 +1,88 @@
-import React, {useEffect, useContext, useState} from "react";
+// app/components/board/grid/grid.component.js
+
+import React, { useEffect, useContext, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { SocketContext } from "../../../contexts/socket.context";
 
-const Grid = () => {
+const CARD_BG = '#1b263b';
+const TEXT = '#e0e1dd';
+const SELECTABLE_BG = '#415a77';
+const PLAYER1_BG = '#33415c';
+const PLAYER2_BG = '#5c2e3f';
 
-    const socket = useContext(SocketContext);
+export default function Grid() {
+  const socket = useContext(SocketContext);
+  const [displayGrid, setDisplayGrid] = useState(false);
+  const [grid, setGrid] = useState([]);
 
-    const [displayGrid, setDisplayGrid] = useState(false);
-    const [canSelectCells, setCanSelectCells] = useState([]);
-    const [grid, setGrid] = useState([]);
-
-    const handleSelectCell = (cellId, rowIndex, cellIndex) => {
-        if (canSelectCells) {
-            socket.emit("game.grid.selected", { cellId, rowIndex, cellIndex });
-        }
+  useEffect(() => {
+    const handler = data => {
+      setDisplayGrid(data.displayGrid);
+      setGrid(data.grid);
     };
+    socket.on("game.grid.view-state", handler);
+    return () => socket.off("game.grid.view-state", handler);
+  }, [socket]);
 
-    useEffect(() => {
-        socket.on("game.grid.view-state", (data) => {
-            setDisplayGrid(data['displayGrid']);
-            setCanSelectCells(data['canSelectCells'])
-            setGrid(data['grid']);
-        });
-    }, []);
+  const onSelect = (cell, r, c) => {
+    if (cell.canBeChecked) {
+      socket.emit("game.grid.selected", { cellId: cell.id, rowIndex: r, cellIndex: c });
+    }
+  };
 
-    return (
-        <View style={styles.gridContainer}>
-            {displayGrid &&
-                grid.map((row, rowIndex) => (
-                    <View key={rowIndex} style={styles.row}>
-                        {row.map((cell, cellIndex) => (
-                            
-                            <TouchableOpacity
-                            
-                                key={cell.id + '-' + rowIndex + '-' + cellIndex}
-                                style={[
-                                    styles.cell,
-                                    cell.owner === "player:1" && styles.playerOwnedCell,
-                                    cell.owner === "player:2" && styles.opponentOwnedCell,
-                                    (cell.canBeChecked && !(cell.owner === "player:1") && !(cell.owner === "player:2")) && styles.canBeCheckedCell,
-                                    rowIndex !== 0 && styles.topBorder,
-                                    cellIndex !== 0 && styles.leftBorder,
-                                ]}
-                                onPress={() => handleSelectCell(cell.id, rowIndex, cellIndex)}
-                                disabled={!cell.canBeChecked}
-                            >
-                                <Text style={styles.cellText}>{cell.viewContent}</Text>
-                                
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                ))}
+  if (!displayGrid) return null;
+
+  return (
+    <View style={styles.container}>
+      {grid.map((row, r) => (
+        <View key={r} style={styles.row}>
+          {row.map((cell, c) => {
+            const selectable = cell.canBeChecked && !cell.owner;
+            let bg = CARD_BG;
+            if (cell.owner === 'player:1') bg = PLAYER1_BG;
+            else if (cell.owner === 'player:2') bg = PLAYER2_BG;
+            else if (selectable) bg = SELECTABLE_BG;
+
+            return (
+              <TouchableOpacity
+                key={`${r}-${c}-${cell.id}`}
+                onPress={() => onSelect(cell, r, c)}
+                disabled={!selectable}
+                style={[styles.cell, { backgroundColor: bg }]}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.text}>{cell.viewContent}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
-    );
-};
+      ))}
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
-    gridContainer: {
-        flex: 7,
-        justifyContent: "center",
-        alignItems: "center",
-        flexDirection: "column",
-    },
-    row: {
-        flexDirection: "row",
-        flex: 1,
-        width: "100%",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    cell: {
-        flexDirection: "row",
-        flex: 2,
-        width: "100%",
-        height: "100%",
-        justifyContent: "center",
-        alignItems: "center",
-        borderWidth: 1,
-        borderColor: "black",
-    },
-    cellText: {
-        fontSize: 11,
-    },
-    playerOwnedCell: {
-        backgroundColor: "lightgreen",
-        opacity: 0.9,
-    },
-    opponentOwnedCell: {
-        backgroundColor: "lightcoral",
-        opacity: 0.9,
-    },
-    canBeCheckedCell: {
-        backgroundColor: "lightyellow",
-    },
-    topBorder: {
-        borderTopWidth: 1,
-    },
-    leftBorder: {
-        borderLeftWidth: 1,
-    },
+  container: {
+    flex: 1,
+    width: '20%',
+    backgroundColor: CARD_BG,
+    borderRadius: 6,
+    padding: 4,
+  },
+  row: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  cell: {
+    flex: 1,
+    margin: 2,
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  text: {
+    color: TEXT,
+    fontSize: 12,
+    fontWeight: '600',
+  },
 });
-
-export default Grid;
